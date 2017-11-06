@@ -1,0 +1,24 @@
+@* dataframe Template File *@
+@(title: String, values: org.apache.spark.sql.DataFrame)
+
+@import org.apache.spark.sql.DataFrame;
+
+@main(title) {
+
+<table style="width:80%" border="1">
+    <tr>
+    @for( s <-  values.columns) {
+        <th>@s</th>
+    }
+    </tr>
+    @for(r <- values.collect() ) {
+        <tr>
+        @for( i <- 0 until r.length ){
+            <td> @r.get(i)</td>    
+        }
+        </tr>
+    }
+      
+</table>
+        
+}        

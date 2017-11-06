@@ -1,0 +1,23 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET     /                           controllers.HomeController.index
+GET 	/searchVideo				controllers.HomeController.searchVideo(name: String)
+GET 	/showMetadata				controllers.HomeController.showMetaInfo(name: String)
+
++ nocsrf
+POST 	/runQuery					controllers.SparkController.runSparkQuery
+
+# test page 
+GET 	/test						controllers.HomeController.test
+GET	    /load						controllers.SparkController.load(name: String)
+GET		/ml							controllers.SparkController.showAnalysis(name: String)
+GET 	/public/videos/*file		controllers.HomeController.getVideo(path = "videos/", file: String)
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+GET		/videos/*file				controllers.Assets.at(path="/videos", file)
+
+

@@ -1,0 +1,29 @@
+@* test Template File *@
+@()
+
+@main("This is a sandbox for testing features and implementaitons") {
+
+
+
+<div id="using_json">test jstree json</div>
+
+<script>
+$('#using_json').jstree({ 'core' : {
+    'data' : [
+       'Simple root node',
+       {
+         'text' : 'Root node 2',
+         'state' : {
+           'opened' : true,
+           'selected' : true
+         },
+         'children' : [
+           { 'text' : 'Child 1' },
+           'Child 2'
+         ]
+      }
+    ]
+} });
+</script> 
+}
+

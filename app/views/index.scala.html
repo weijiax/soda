@@ -1,0 +1,34 @@
+@(names : List[String])
+@import scala.util.Random
+
+@main("Welcome to SODA") {
+
+<div class="container-fluid">
+
+<h1> 
+<row class=".col-xl-" style="background-color:powderblue;color:purple;">
+ Detection, Tracking and Query Objects from Traffic Camera Video 
+</row>
+<row>
+<video  width="1280" height="720" controls autoplay>
+	<source src="@routes.Assets.versioned("videos/"+Random.shuffle(names).head+"/out.mov")">
+  @*
+  <source src="@routes.HomeController.getVideo(Random.shuffle(names).head+"/out.mov")">*@
+Your browser does not support the video tag.
+</video>
+</row>
+
+</h1>
+</div>
+<div class=".col-xl-" style="margin-left:2em; text-align:center;"> 
+<h2 > Select video to see more examples</h2> 
+ 
+ 
+
+@for( name <- names){
+    <B><a href=/searchVideo?name=@name>@name</a>&emsp;</B> 
+}
+
+</div>
+
+}

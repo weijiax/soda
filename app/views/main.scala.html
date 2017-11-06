@@ -1,0 +1,21 @@
+@(title: String)(content: Html)
+
+<!DOCTYPE html>
+
+<html lang="en">
+    <head>
+        <title>@title</title>
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/main.css")"> 
+        <link rel="shortcut icon" type="image/png" href="@routes.Assets.versioned("images/favicon.png")">
+        <link rel="stylesheet" href="@routes.Assets.versioned("stylesheets/style.min.css")">
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/jquery.dataTables.min.css")"> 
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/bootstrap.min.css")"> 
+        <script src="@routes.Assets.versioned("javascripts/jquery-3.2.1.js")"></script>
+        <script src="@routes.Assets.versioned("javascripts/jstree.min.js")" ></script>
+         <script src="@routes.Assets.versioned("javascripts/jquery.dataTables.min.js")" ></script>
+        
+      </head>
+    <body>
+        @content
+    </body>
+</html>

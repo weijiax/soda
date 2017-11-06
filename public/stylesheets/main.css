@@ -1,0 +1,46 @@
+div.container {
+    width: 100%;
+    border-top: 0px solid blue;
+    margin: 10px;
+    padding: 1em;
+    color: black;
+    background-color: white;
+    clear: left;
+    text-align: center;
+    
+}
+
+preview {
+    float: left;
+    min-width: 320px;
+    margin: 0;
+    border-right: 0px solid gray;
+    margin-right: 200px; 
+    padding: 0 em;
+    text-align: center;
+	vertical-align: middle;
+	color: red;
+	background-color: white;
+}
+
+results{
+    margin-left: 100px;
+    padding: 0em;
+    overflow: hidden;
+    align-content: center;
+    
+}
+
+table, th, td 
+{
+    
+    border:solid 1px #333;
+    padding:2px 4px;
+    font:15px Tahoma;
+    align:center;
+}
+th {
+     font-weight:bold;
+}
+
+h1 {text-align:center;}

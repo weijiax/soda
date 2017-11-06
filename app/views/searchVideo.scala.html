@@ -1,0 +1,136 @@
+@* searchVideo Template File *@
+@(vname: String, form: Form[QueryForm.Data] )(implicit request: MessagesRequestHeader)
+
+
+@main("Query "+ vname) {
+
+<div id="raw", class="container"><p style="background-color:powderblue;"><B>Original Video<BR></B></p>
+<preview>
+Raw video: @vname  <BR> 
+<video width="640" height="360" controls>
+  <source src="@routes.Assets.versioned("videos/"+vname+"/raw.mov")">
+  @*<source src="@routes.HomeController.getVideo(vname+"/raw.mov")">*@
+Your browser does not support the video tag.
+</video>
+ </preview>
+<div class="results" id="summary">
+Video Metadata
+<div id="s_table"> 
+</div>
+</div>
+</div>
+
+    
+<div id = "processed", class="container" backgound-color=><p style="background-color:powderblue;">
+<B>Object Recognition and Tracking Results from Video<BR></B></p>
+<div class="row" width=100>
+
+<preview class="col-sm-5">
+Labeled Video of @vname <BR>
+<video id = "vid2" width="640" height="360" algin="center" controls>
+  <source src="@routes.Assets.versioned("videos/"+vname+"/out.mov#t=0")">
+  @*<source src="@routes.Assets.at(vname+"/out.mov#t=0")">*@
+	Your browser does not support the video tag.
+</video> 
+</preview>
+<div class="col-sm-3 col-md-offset-1" style="center">
+Extracted background image
+<img src="@routes.Assets.versioned("videos/"+vname+"/out_bg.jpg")" alt="Background Image" height="320" width="480" /img>
+  </div>
+</div>
+
+
+<div id = "query_box", class="container" ><p style="background-color:powderblue;">
+<B>Search Objects in Video</B></p>
+   <p align="left" > <BR> <tt>
+      <label >Select: </label><textarea id="pred" name="predicate" rows ="1" cols="100">car_id, isMoving, min(frame) as start_frame, max(frame) as last_frame</textarea>  <BR>
+      <label >Filter: </label><textarea id="cond" name="condition" rows ="1" cols="100">car_id>0 group by car_id, isMoving order by start_frame, car_id</textarea>  
+      <button onClick='Javascript:runQuery("query_results")'> Search</button> 
+    </tt> </p>
+ </div> 
+<results id = "query_results" ></results>
+
+<script>
+$(document).ready(function(){jsonObject2Doc("/showMetadata?name=@vname", "s_table")});
+
+function jsonObject2Doc(t_url, t_div){
+	$.getJSON(t_url, function(data) {
+	  var table = document.createElement("table");
+	  table.setAttribute("id", "metadata");
+	  $.each(data, function(index, obj){
+	  	for (var key in obj) {
+	  		console.log(key, obj[key]);
+	  	   var tr= table.insertRow(-1);
+	  	   var tabCell = tr.insertCell(-1);
+	  	   tabCell.innerHTML="<b>"+key+"</b>";
+	  	   tabCell= tr.insertCell(-1);
+	  	   tabCell.innerHTML=obj[key];
+	  	}
+	  })
+	  document.getElementById(t_div).appendChild(table);
+	})
+};
+
+function runQuery(target){
+    var json = '{ "pred" : "'+ document.getElementById("pred").value
+    		+ '", "table" : "@vname", "cond" : " '
+    		+ document.getElementById("cond").value +'"}'
+	var xhttp = new XMLHttpRequest();
+  	xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      @*document.getElementById(target).innerHTML = this.responseText;*@
+      js2Table(JSON.parse(this.responseText));
+    	}
+  	};
+  	console.log(json);
+  	
+  xhttp.open("POST", "/runQuery", true);
+  xhttp.setRequestHeader("Content-type", "application/json");
+  xhttp.send(json);	
+}
+
+function js2Table(jsondata){
+ var table = document.createElement("table");
+ table.setAttribute("id", "myDataTable");
+ table.setAttribute("class", "display");
+ var header = table.createTHead();
+ var row = header.insertRow(0);
+ var headerString = "["   
+ for (var key in jsondata[0]){
+ 	var cell = row.insertCell(-1);
+ 	cell.innerHTML=key
+ 	headerString += '{"data":"'+key+'"},'
+ }
+ headerString=headerString.replace(/.$/,"]")
+ 
+ //console.log(headerString)
+ document.getElementById("query_results").innerHTML=""
+ document.getElementById("query_results").appendChild(table);
+ $('#myDataTable').DataTable().destroy() 
+ var datatable = $('#myDataTable').DataTable( {
+        data: jsondata, 
+        columns: JSON.parse(headerString)
+    } );
+ 
+ $('#myDataTable tbody').on( 'click', 'tr', function () {
+     if ( $(this).hasClass('selected') ) {
+         $(this).removeClass('selected');
+     }
+     else {
+         datatable.$('tr.selected').removeClass('selected');
+         $(this).addClass('selected');
+     }
+ 	 var idx =  datatable.row( this ).data()["start_frame"]
+ 	 if (idx != null){
+ 		 var fps = document.getElementById('metadata').rows[3].cells[1].innerHTML
+ 		 console.log(idx / fps)
+ 		 document.getElementById('vid2').currentTime = idx / fps;
+ 	 }else 
+ 		 console.log("don't have valid column to position video")
+ } );
+}
+</script>
+
+
+
+}
