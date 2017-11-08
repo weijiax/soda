@@ -26,18 +26,18 @@ class SparkController @Inject()(cc: MessagesControllerComponents)
       .getOrCreate();
     val header = Seq("frame", "obj_id", "isMoving", "car_id", "y_class", "confidence", "x_min", "y_min", "x_max", "y_max", "dx", "dy")
     
-    var ready=false;
+    //var ready=false;
     
     def initData(name:String) ={
           val data:DataFrame =spark.read.format("csv").option("inferSchema", "true")
               .load(video_root+name+"/out.log").toDF(header:_*)
           data.createOrReplaceTempView(name)
-          ready=true;
+      //    ready=true;
     }
-    
-    def existTable(name: String) : Boolean ={
-      spark.catalog.tableExists(name)
-    }
+    //not used
+    //def existTable(name: String) : Boolean ={
+    //  spark.catalog.tableExists(name)
+    //}
   def load (name : String)  = Action {
   //  Action.async{
       
@@ -72,7 +72,7 @@ class SparkController @Inject()(cc: MessagesControllerComponents)
   }
   
   def runAnalysis (table_name:String): DataFrame = {
-    if (!ready) initData(table_name)
+    if (!spark.catalog.tableExists(table_name)) initData(table_name)
     
     val movement = spark.sql("SELECT car_id, min(frame) as start_frame, max(frame) as end_frame from "
           +table_name + " WHERE car_id > 0 GROUP by car_id")
