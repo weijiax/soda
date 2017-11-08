@@ -35,6 +35,9 @@ class SparkController @Inject()(cc: MessagesControllerComponents)
           ready=true;
     }
     
+    def existTable(name: String) : Boolean ={
+      spark.catalog.tableExists(name)
+    }
   def load (name : String)  = Action {
   //  Action.async{
       
@@ -61,7 +64,7 @@ class SparkController @Inject()(cc: MessagesControllerComponents)
           if( ! Option(cond.trim).forall(_.isEmpty))
               qs = qs + " WHERE "+ cond
           println("running : "+ qs)
-       if (!ready) initData(table_name)
+       if (!spark.catalog.tableExists(table_name)) initData(table_name)
         Ok("["+spark.sql(qs).toJSON.collect().mkString(",")+"]")  
        }
       //Ok(request.body.asText.getOrElse("failed to get request as text"))
