@@ -1,0 +1,182 @@
+#include "darknet.hpp"
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/video.hpp>
+#include <opencv2/videoio.hpp>
+//#include <opencv2/tracking.hpp>
+//#include <opencv2/cudabgsegm.hpp>
+
+#include <iostream>
+
+using namespace cv;
+using namespace std;
+
+#include <time.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/time.h>
+
+#define MAX_OBJ	(512)
+
+typedef struct	{
+	int x, y, xMax, yMax;
+	int type;	// 0 - people;	1 - car or truck;  2- bus
+	int prob;
+}OBJECT,*POBJECT;
+
+int nObj_Yolo=0;
+OBJECT Yolo_ObjList[MAX_OBJ];
+
+image im;
+
+Mat frame; //current frame
+
+double fps, fps_inv, t_video;
+int width, height;
+int nFrame=0;
+
+void Mat_into_image(Mat src, image im);
+
+int main(int argc, char **argv)
+{
+    static struct timeval tm1, tm2;
+    float thresh=0.24;
+    float hier_thresh=0.50;
+    list *options = read_data_cfg("cfg/coco.data");
+    char *name_list = option_find_str(options, "names", "data/names.list");
+    char **names = get_labels(name_list);
+    clock_t time;
+    char buff[256], szTxt[128];
+    int i,j;
+    float nms=.4;
+    int nReadItem, Frame;
+    FILE *fOut=NULL;
+    int keyboard; //input from keyboard
+
+    gpu_index = -1;
+
+    image **alphabet = load_alphabet();
+    network net = parse_network_cfg("cfg/yolo.cfg");
+    load_weights(&net, "/work/00410/huang/maverick/yolo/yolo.weights");
+    
+    set_batch_network(&net, 1);
+    layer l = net.layers[net.n-1];
+    srand(2222222);
+	
+//    gpu_index = 0;
+//    cuda_set_device(gpu_index);
+
+    VideoCapture capture(argv[1]);
+    if(!capture.isOpened()){
+        //error in opening the video input
+        cerr << "Unable to open video file: " << argv[1] << endl;
+        exit(EXIT_FAILURE);
+    }
+    width = capture.get(CV_CAP_PROP_FRAME_WIDTH);
+    height = capture.get(CV_CAP_PROP_FRAME_HEIGHT);
+    fps = capture.get(CV_CAP_PROP_FPS);
+    fps_inv = 1.0/fps;
+    
+    im = make_image(width, height, 3);	// color image. three channels
+    
+    fOut = fopen("yolo.log", "w");
+
+    gettimeofday(&tm1, NULL);
+		
+    while( (char)keyboard != 'q' && (char)keyboard != 27 ){
+        //read the current frame
+        if(!capture.read(frame)) {
+            cerr << "Unable to read next frame." << endl;
+            cerr << "Exiting..." << endl;
+            break;
+        }
+        nFrame++;
+        
+        t_video += fps_inv;
+
+        time=clock();
+
+        Mat_into_image(frame, im);
+        image sized = letterbox_image(im, net.w, net.h);
+    
+        box *boxes = (box *)calloc(l.w*l.h*l.n, sizeof(box));
+        float **probs = (float **)calloc(l.w*l.h*l.n, sizeof(float *));
+        for(j = 0; j < l.w*l.h*l.n; ++j) probs[j] = (float *)calloc(l.classes + 1, sizeof(float *));
+    
+        float *X = sized.data;
+        network_predict(net, X);
+        get_region_boxes(l, im.w, im.h, net.w, net.h, thresh, probs, boxes, 0, 0, hier_thresh, 1);
+        if (nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
+    
+        draw_detections_Ex(im, l.w*l.h*l.n, thresh, boxes, probs, names, alphabet, l.classes, &nObj_Yolo, (int*)Yolo_ObjList);
+
+        fprintf(fOut, "%5d %3d\n", nFrame, nObj_Yolo);
+        for(i=0; i<nObj_Yolo; i++) {
+           fprintf(fOut, "%d %d %d %d %d %d\n", Yolo_ObjList[i].type, Yolo_ObjList[i].x, Yolo_ObjList[i].y, Yolo_ObjList[i].xMax, Yolo_ObjList[i].yMax, Yolo_ObjList[i].prob);
+        }
+
+        free_image(sized);
+        free(boxes);
+        free_ptrs((void **)probs, l.w*l.h*l.n);
+ 
+//        if(nFrame >= 200)    break;
+    }
+    capture.release();
+    fclose(fOut);
+
+    printf("nFrame = %d\n", nFrame);
+    gettimeofday(&tm2, NULL);
+
+    unsigned long long t = 1000 * (tm2.tv_sec - tm1.tv_sec) + (tm2.tv_usec - tm1.tv_usec) / 1000;
+    printf("%llu ms. %4.1lf fps\n", t, (double)(nFrame/( (double)(0.001*(double)(t))  )) );
+
+
+    free_image(im);
+
+    return 0;
+}
+
+void Mat_into_image(Mat src, image im)
+{    
+    unsigned char *data = (unsigned char *)(src.data);
+    int h = src.rows;
+    int w = src.cols;
+    int c = src.channels();
+    int step = src.step;
+    int i, j, k, w_h, w_h_2;
+
+    w_h = w * h;
+    w_h_2 = w_h*2;
+
+    for(i = 0; i < h; ++i){
+        for(j = 0; j < w; ++j){
+            for(k= 0; k < c; ++k){
+                im.data[k*w*h + i*w + j] = data[i*step + j*c + k]/255.;	// convert to float
+            }
+        }
+    }
+
+    k = 0;	// Red
+    for(i = 0; i < h; ++i){
+        for(j = 0; j < w; ++j){
+             im.data[i*w + j] = data[i*step + j*c + 2]/255.;	// convert to float
+        }
+    }
+
+    k = 1;	// Green
+    for(i = 0; i < h; ++i){
+        for(j = 0; j < w; ++j){
+             im.data[w_h + i*w + j] = data[i*step + j*c + 1]/255.;	// convert to float
+        }
+    }
+
+    k = 2;	// Blue
+    for(i = 0; i < h; ++i){
+        for(j = 0; j < w; ++j){
+             im.data[w_h_2 + i*w + j] = data[i*step + j*c    ]/255.;	// convert to float
+        }
+    }
+//    rgbgr_image(out);	// swap R<->B
+}
